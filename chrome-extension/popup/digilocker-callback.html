@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>DigiLocker - Connecting...</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    
+    body {
+      font-family: 'Segoe UI', Roboto, Arial, sans-serif;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: linear-gradient(135deg, #4CAF50 0%, #388E3C 100%);
+    }
+    
+    .container {
+      background: white;
+      border-radius: 16px;
+      padding: 40px;
+      text-align: center;
+      max-width: 400px;
+      box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+    }
+    
+    .icon {
+      width: 64px;
+      height: 64px;
+      margin: 0 auto 20px;
+      background: #4CAF50;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    
+    .icon svg {
+      width: 32px;
+      height: 32px;
+      fill: white;
+    }
+    
+    .icon.error {
+      background: #f44336;
+    }
+    
+    .icon.success {
+      background: #4CAF50;
+    }
+    
+    h1 {
+      font-size: 24px;
+      color: #333;
+      margin-bottom: 10px;
+    }
+    
+    p {
+      color: #666;
+      margin-bottom: 20px;
+    }
+    
+    .spinner {
+      width: 40px;
+      height: 40px;
+      border: 3px solid #e0e0e0;
+      border-top-color: #4CAF50;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+      margin: 0 auto 20px;
+    }
+    
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+    
+    .btn {
+      display: inline-block;
+      padding: 12px 24px;
+      background: #4CAF50;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      font-size: 14px;
+      cursor: pointer;
+      text-decoration: none;
+    }
+    
+    .btn:hover {
+      background: #388E3C;
+    }
+    
+    .hidden {
+      display: none;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div id="loading-state">
+      <div class="spinner"></div>
+      <h1>Connecting to DigiLocker</h1>
+      <p>Please wait while we complete the connection...</p>
+    </div>
+    
+    <div id="success-state" class="hidden">
+      <div class="icon success">
+        <svg viewBox="0 0 24 24">
+          <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/>
+        </svg>
+      </div>
+      <h1>Connected Successfully!</h1>
+      <p id="success-message">Your DigiLocker is now connected.</p>
+      <p>You can close this tab and return to the extension.</p>
+      <button class="btn" onclick="window.close()">Close Tab</button>
+    </div>
+    
+    <div id="error-state" class="hidden">
+      <div class="icon error">
+        <svg viewBox="0 0 24 24">
+          <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/>
+        </svg>
+      </div>
+      <h1>Connection Failed</h1>
+      <p id="error-message">Something went wrong. Please try again.</p>
+      <button class="btn" onclick="window.close()">Close Tab</button>
+    </div>
+  </div>
+  
+  <script>
+    // Parse URL parameters
+    const urlParams = new URLSearchParams(window.location.search);
+    const code = urlParams.get('code');
+    const state = urlParams.get('state');
+    const error = urlParams.get('error');
+    const success = urlParams.get('success');
+    const name = urlParams.get('name');
+    
+    async function processCallback() {
+      const loadingState = document.getElementById('loading-state');
+      const successState = document.getElementById('success-state');
+      const errorState = document.getElementById('error-state');
+      
+      // If this is a redirect back with success
+      if (success === 'true') {
+        loadingState.classList.add('hidden');
+        successState.classList.remove('hidden');
+        if (name) {
+          document.getElementById('success-message').textContent = `Connected as ${name}`;
+        }
+        
+        // Notify extension
+        chrome.storage.local.set({ digilocker_connected: true });
+        return;
+      }
+      
+      // If there's an error from DigiLocker
+      if (error) {
+        loadingState.classList.add('hidden');
+        errorState.classList.remove('hidden');
+        document.getElementById('error-message').textContent = decodeURIComponent(error);
+        return;
+      }
+      
+      // If we have a code, exchange it for token
+      if (code && state) {
+        try {
+          // Get auth token from storage
+          const storage = await chrome.storage.local.get(['auth_token', 'digilocker_state']);
+          
+          // Verify state
+          if (storage.digilocker_state !== state) {
+            throw new Error('Invalid state parameter. Please try again.');
+          }
+          
+          // Exchange code for token
+          const response = await fetch('http://127.0.0.1:8000/digilocker/auth/callback', {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${storage.auth_token}`,
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ code, state })
+          });
+          
+          const data = await response.json();
+          
+          if (data.success) {
+            loadingState.classList.add('hidden');
+            successState.classList.remove('hidden');
+            if (data.name) {
+              document.getElementById('success-message').textContent = `Connected as ${data.name}`;
+            }
+            
+            // Notify extension
+            chrome.storage.local.set({ 
+              digilocker_connected: true,
+              digilocker_auth_pending: false
+            });
+          } else {
+            throw new Error(data.error || 'Failed to connect');
+          }
+        } catch (err) {
+          loadingState.classList.add('hidden');
+          errorState.classList.remove('hidden');
+          document.getElementById('error-message').textContent = err.message;
+        }
+      } else {
+        // No valid parameters
+        loadingState.classList.add('hidden');
+        errorState.classList.remove('hidden');
+        document.getElementById('error-message').textContent = 'Invalid callback. Please try connecting again.';
+      }
+    }
+    
+    // Run on load
+    processCallback();
+  </script>
+</body>
+</html>

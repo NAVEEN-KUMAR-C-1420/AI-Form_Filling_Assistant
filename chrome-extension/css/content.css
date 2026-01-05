@@ -1,0 +1,357 @@
+/**
+ * Content Script Styles
+ * Styles for autofill UI elements injected into government websites
+ */
+
+/* Autofill Button */
+.form-assistant-btn {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  z-index: 999999;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 20px;
+  background: linear-gradient(135deg, #1976D2 0%, #1565C0 100%);
+  color: white;
+  border: none;
+  border-radius: 30px;
+  font-family: 'Segoe UI', Roboto, Arial, sans-serif;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  box-shadow: 0 4px 15px rgba(25, 118, 210, 0.4);
+  transition: all 0.3s ease;
+}
+
+.form-assistant-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(25, 118, 210, 0.5);
+}
+
+.form-assistant-btn:active {
+  transform: translateY(0);
+}
+
+.form-assistant-btn svg {
+  flex-shrink: 0;
+}
+
+/* Popup Styles */
+.form-assistant-popup {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 9999999;
+  width: 90%;
+  max-width: 450px;
+  background: white;
+  border-radius: 16px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+  font-family: 'Segoe UI', Roboto, Arial, sans-serif;
+  animation: popupSlideIn 0.3s ease;
+}
+
+@keyframes popupSlideIn {
+  from {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0.9);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1);
+  }
+}
+
+.popup-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 20px;
+  background: linear-gradient(135deg, #1976D2 0%, #1565C0 100%);
+  border-radius: 16px 16px 0 0;
+  color: white;
+}
+
+.popup-header h3 {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.popup-header .close-btn {
+  background: none;
+  border: none;
+  color: white;
+  font-size: 24px;
+  cursor: pointer;
+  padding: 0;
+  line-height: 1;
+  opacity: 0.8;
+  transition: opacity 0.2s;
+}
+
+.popup-header .close-btn:hover {
+  opacity: 1;
+}
+
+.popup-content {
+  padding: 20px;
+  max-height: 400px;
+  overflow-y: auto;
+}
+
+.popup-content p {
+  margin: 0 0 15px;
+  color: #333;
+  font-size: 14px;
+}
+
+/* Fields Preview */
+.fields-preview, .verify-fields {
+  background: #f8f9fa;
+  border-radius: 8px;
+  padding: 12px;
+  margin-bottom: 15px;
+}
+
+.field-preview, .verify-field {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 0;
+  border-bottom: 1px solid #e0e0e0;
+}
+
+.field-preview:last-child, .verify-field:last-child {
+  border-bottom: none;
+}
+
+.field-preview label, .verify-field label {
+  font-weight: 500;
+  color: #555;
+  font-size: 13px;
+}
+
+.field-value, .verify-field span {
+  font-family: 'Consolas', monospace;
+  color: #1976D2;
+  font-size: 13px;
+  background: white;
+  padding: 4px 8px;
+  border-radius: 4px;
+}
+
+/* Consent Notice */
+.consent-notice {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 12px;
+  background: #e3f2fd;
+  border-radius: 8px;
+  font-size: 13px;
+  color: #1565C0;
+}
+
+.consent-notice input[type="checkbox"] {
+  margin-top: 2px;
+  width: 18px;
+  height: 18px;
+  accent-color: #1976D2;
+}
+
+.consent-notice label {
+  cursor: pointer;
+}
+
+/* Warning Notice */
+.warning-notice {
+  background: #fff3e0;
+  border-left: 4px solid #ff9800;
+  padding: 12px;
+  border-radius: 0 8px 8px 0;
+  margin-top: 15px;
+}
+
+.warning-notice p {
+  margin: 0;
+  color: #e65100;
+  font-size: 13px;
+}
+
+/* Popup Actions */
+.popup-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  padding: 15px 20px;
+  background: #f5f5f5;
+  border-radius: 0 0 16px 16px;
+}
+
+.btn-primary, .btn-secondary {
+  padding: 10px 20px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-primary {
+  background: linear-gradient(135deg, #1976D2 0%, #1565C0 100%);
+  color: white;
+  border: none;
+}
+
+.btn-primary:hover {
+  box-shadow: 0 4px 12px rgba(25, 118, 210, 0.4);
+}
+
+.btn-primary.btn-submit {
+  background: linear-gradient(135deg, #4CAF50 0%, #388E3C 100%);
+}
+
+.btn-primary.btn-submit:hover {
+  box-shadow: 0 4px 12px rgba(76, 175, 80, 0.4);
+}
+
+.btn-secondary {
+  background: white;
+  color: #666;
+  border: 1px solid #ddd;
+}
+
+.btn-secondary:hover {
+  background: #f5f5f5;
+  border-color: #bbb;
+}
+
+/* Verification Popup */
+.verification-popup .popup-header {
+  background: linear-gradient(135deg, #ff9800 0%, #f57c00 100%);
+}
+
+/* Filled Field Highlight */
+.form-assistant-filled {
+  border: 2px solid #4CAF50 !important;
+  background-color: rgba(76, 175, 80, 0.08) !important;
+  transition: all 0.3s ease;
+}
+
+/* Notification */
+.form-assistant-notification {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  z-index: 99999999;
+  padding: 15px 25px;
+  border-radius: 8px;
+  font-family: 'Segoe UI', Roboto, Arial, sans-serif;
+  font-size: 14px;
+  font-weight: 500;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+  animation: slideInRight 0.3s ease;
+}
+
+@keyframes slideInRight {
+  from {
+    opacity: 0;
+    transform: translateX(100px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.form-assistant-notification.success {
+  background: #4CAF50;
+  color: white;
+}
+
+.form-assistant-notification.error {
+  background: #f44336;
+  color: white;
+}
+
+.form-assistant-notification.warning {
+  background: #ff9800;
+  color: white;
+}
+
+.form-assistant-notification.info {
+  background: #2196F3;
+  color: white;
+}
+
+/* Overlay */
+.form-assistant-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  z-index: 9999998;
+}
+
+/* Scrollbar for popup content */
+.popup-content::-webkit-scrollbar {
+  width: 6px;
+}
+
+.popup-content::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 3px;
+}
+
+.popup-content::-webkit-scrollbar-thumb {
+  background: #bbb;
+  border-radius: 3px;
+}
+
+.popup-content::-webkit-scrollbar-thumb:hover {
+  background: #999;
+}
+
+/* Voice Input Button */
+.voice-input-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: #1976D2;
+  color: white;
+  border: none;
+  cursor: pointer;
+  margin-left: 8px;
+  transition: all 0.2s;
+}
+
+.voice-input-btn:hover {
+  background: #1565C0;
+  transform: scale(1.1);
+}
+
+.voice-input-btn.recording {
+  background: #f44336;
+  animation: pulse 1s infinite;
+}
+
+@keyframes pulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(244, 67, 54, 0.4);
+  }
+  70% {
+    box-shadow: 0 0 0 10px rgba(244, 67, 54, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(244, 67, 54, 0);
+  }
+}
