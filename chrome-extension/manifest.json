@@ -1,0 +1,70 @@
+{
+  "manifest_version": 3,
+  "name": "AI Form Filling Assistant",
+  "version": "2.0.0",
+  "description": "AI-powered form filling assistant for Indian Government Services with OCR and multi-language support",
+  
+  "permissions": [
+    "storage",
+    "activeTab",
+    "scripting",
+    "notifications"
+  ],
+  
+  "host_permissions": [
+    "http://localhost:8000/*",
+    "http://127.0.0.1:8000/*",
+    "https://*.gov.in/*",
+    "https://*.india.gov.in/*",
+    "https://*.digitalindia.gov.in/*",
+    "https://*.uidai.gov.in/*",
+    "https://*.incometax.gov.in/*",
+    "https://*.epfindia.gov.in/*",
+    "https://digilocker.meripehchaan.gov.in/*",
+    "https://api.digitallocker.gov.in/*",
+    "https://*.digilocker.gov.in/*"
+  ],
+  
+  "background": {
+    "service_worker": "js/background.js",
+    "type": "module"
+  },
+  
+  "content_scripts": [
+    {
+      "matches": ["https://*.gov.in/*", "https://*.india.gov.in/*"],
+      "js": ["js/content.js"],
+      "css": ["css/content.css"],
+      "run_at": "document_end"
+    }
+  ],
+  
+  "action": {
+    "default_popup": "popup/popup.html",
+    "default_icon": {
+      "16": "icons/icon16.png",
+      "32": "icons/icon32.png",
+      "48": "icons/icon48.png",
+      "128": "icons/icon128.png"
+    },
+    "default_title": "AI Form Assistant"
+  },
+  
+  "icons": {
+    "16": "icons/icon16.png",
+    "32": "icons/icon32.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  },
+  
+  "web_accessible_resources": [
+    {
+      "resources": ["css/*", "icons/*"],
+      "matches": ["https://*.gov.in/*"]
+    }
+  ],
+  
+  "content_security_policy": {
+    "extension_pages": "script-src 'self'; object-src 'self'"
+  }
+}
