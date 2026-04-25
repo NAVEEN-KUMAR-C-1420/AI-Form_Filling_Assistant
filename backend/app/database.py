@@ -6,6 +6,7 @@ from typing import AsyncGenerator
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine, async_sessionmaker
 from sqlalchemy.orm import declarative_base
 from sqlalchemy.pool import NullPool, StaticPool
+from sqlalchemy import text
 from loguru import logger
 
 from app.config import settings
@@ -45,12 +46,27 @@ Base = declarative_base()
 
 async def init_db():
     """Initialize database - create all tables"""
+    if not settings.AUTO_CREATE_TABLES:
+        logger.info("AUTO_CREATE_TABLES is disabled; skipping metadata.create_all")
+        return
+
     async with engine.begin() as conn:
         # Import all models to ensure they're registered
         from app.models import user, document, consent_log
         # Use checkfirst=True to avoid error if tables already exist
         await conn.run_sync(lambda sync_conn: Base.metadata.create_all(sync_conn, checkfirst=True))
     logger.info("Database tables created successfully")
+
+
+async def check_db_connection() -> bool:
+    """Lightweight DB connectivity check for readiness probes."""
+    try:
+        async with engine.connect() as conn:
+            await conn.execute(text("SELECT 1"))
+        return True
+    except Exception as exc:
+        logger.error(f"Database readiness check failed: {exc}")
+        return False
 
 
 async def close_db():

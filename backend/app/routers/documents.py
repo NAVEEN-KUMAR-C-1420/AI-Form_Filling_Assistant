@@ -3,9 +3,11 @@ Documents Router
 Endpoints for document upload, extraction, and confirmation
 """
 from uuid import UUID
-from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File, Form, Request
+from pathlib import Path
+from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File, Form
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.config import settings
 from app.database import get_db
 from app.models.user import User
 from app.models.document import DocumentType
@@ -118,19 +120,14 @@ async def extract_document_data(
             detail="Document not found"
         )
     
-    # Build file path
-    from pathlib import Path
-    from app.config import settings
-    
     # Find the temp file
     user_dir = Path(settings.TEMP_UPLOAD_DIR) / str(current_user.id)
     file_path = None
     
     if user_dir.exists():
-        for f in user_dir.iterdir():
-            if f.is_file():
-                file_path = str(f)
-                break
+        matching_files = [f for f in user_dir.iterdir() if f.is_file() and document.file_hash in f.name]
+        if matching_files:
+            file_path = str(matching_files[0])
     
     if not file_path:
         raise HTTPException(

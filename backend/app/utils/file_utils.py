@@ -5,7 +5,6 @@ File handling, validation, and processing helpers
 import os
 import hashlib
 import aiofiles
-import uuid
 from pathlib import Path
 from typing import Tuple, Optional
 from fastapi import UploadFile, HTTPException, status
@@ -89,19 +88,21 @@ async def save_temp_file(file: UploadFile, user_id: str) -> Tuple[str, str, int]
     Save uploaded file to temporary storage
     Returns (file_path, file_hash, file_size)
     """
-    # Create user directory
-    user_dir = Path(settings.TEMP_UPLOAD_DIR) / user_id
-    user_dir.mkdir(parents=True, exist_ok=True)
-    
-    # Generate unique filename
-    ext = Path(file.filename).suffix.lower()
-    unique_filename = f"{uuid.uuid4()}{ext}"
-    file_path = user_dir / unique_filename
-    
     # Read and hash content
     content = await file.read()
     file_hash = hashlib.sha256(content).hexdigest()
     file_size = len(content)
+
+    # Create user directory
+    user_dir = Path(settings.TEMP_UPLOAD_DIR) / user_id
+    user_dir.mkdir(parents=True, exist_ok=True)
+
+    # Embed the content hash in the filename so /extract can resolve the exact
+    # uploaded file deterministically.
+    ext = Path(file.filename).suffix.lower()
+    sanitized_name = Path(sanitize_filename(file.filename)).stem
+    unique_filename = f"{file_hash}_{sanitized_name}{ext}"
+    file_path = user_dir / unique_filename
     
     # Save file
     async with aiofiles.open(file_path, 'wb') as f:

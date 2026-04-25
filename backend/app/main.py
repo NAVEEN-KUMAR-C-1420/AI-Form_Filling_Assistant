@@ -7,16 +7,21 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI, Request, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.httpsredirect import HTTPSRedirectMiddleware
+from starlette.middleware.trustedhost import TrustedHostMiddleware
 from fastapi.responses import JSONResponse
 from fastapi.exceptions import RequestValidationError
 from loguru import logger
 import sys
 
 from app.config import settings
-from app.database import init_db, close_db
+from app.database import init_db, close_db, check_db_connection
 from app.routers import auth, documents, user, voice, digilocker
 from app.middleware.rate_limiter import RateLimitMiddleware
 from app.middleware.audit_logger import AuditLogMiddleware
+
+
+# Ensure log directory exists before file logger initialization.
+os.makedirs("logs", exist_ok=True)
 
 
 # Configure logging
@@ -75,13 +80,19 @@ app = FastAPI(
 
 # Security Middleware - HTTPS redirect in production
 if settings.ENVIRONMENT == "production":
-    app.add_middleware(HTTPSRedirectMiddleware)
+    if settings.ENABLE_HTTPS_REDIRECT:
+        app.add_middleware(HTTPSRedirectMiddleware)
+    app.add_middleware(TrustedHostMiddleware, allowed_hosts=settings.ALLOWED_HOSTS)
 
 
 # CORS Middleware
+cors_origins = [origin for origin in settings.ALLOWED_ORIGINS if origin != "chrome-extension://*"]
+cors_origin_regex = r"chrome-extension://.*" if "chrome-extension://*" in settings.ALLOWED_ORIGINS else None
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=settings.ALLOWED_ORIGINS,
+    allow_origins=cors_origins,
+    allow_origin_regex=cors_origin_regex,
     allow_credentials=True,
     allow_methods=["GET", "POST", "PUT", "DELETE"],
     allow_headers=["*"],
@@ -92,6 +103,20 @@ app.add_middleware(
 # Custom Middleware
 app.add_middleware(RateLimitMiddleware)
 app.add_middleware(AuditLogMiddleware)
+
+
+if settings.ENABLE_SECURITY_HEADERS:
+    @app.middleware("http")
+    async def add_security_headers(request: Request, call_next):
+        """Add common hardening headers for browser clients."""
+        response = await call_next(request)
+        response.headers["X-Content-Type-Options"] = "nosniff"
+        response.headers["X-Frame-Options"] = "DENY"
+        response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+        response.headers["Permissions-Policy"] = "camera=(), microphone=(), geolocation=()"
+        if settings.ENVIRONMENT == "production":
+            response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
+        return response
 
 
 # Exception Handlers
@@ -138,6 +163,18 @@ async def health_check():
         "version": settings.APP_VERSION,
         "environment": settings.ENVIRONMENT
     }
+
+
+@app.get("/ready", tags=["Health"])
+async def readiness_check():
+    """Readiness endpoint that verifies database connectivity."""
+    db_ok = await check_db_connection()
+    if not db_ok:
+        return JSONResponse(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            content={"status": "not_ready", "database": "unreachable"}
+        )
+    return {"status": "ready", "database": "ok"}
 
 
 @app.get("/", tags=["Root"])

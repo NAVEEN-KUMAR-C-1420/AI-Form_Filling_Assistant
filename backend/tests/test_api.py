@@ -1,29 +1,31 @@
 """
 Test suite for the Form Filling Assistant API
 """
+import os
 import pytest
-import asyncio
 from httpx import AsyncClient, ASGITransport
+
+# Force deterministic test settings before importing the app.
+os.environ.setdefault("ENVIRONMENT", "test")
+os.environ.setdefault("DEBUG", "false")
+os.environ.setdefault("AUTO_CREATE_TABLES", "true")
+os.environ.setdefault("DATABASE_URL", "sqlite+aiosqlite:///./test_form_assistant.db")
+
 from app.main import app
 from app.config import settings
-
-
-@pytest.fixture(scope="session")
-def event_loop():
-    """Create an instance of the default event loop for the test session."""
-    loop = asyncio.get_event_loop_policy().new_event_loop()
-    yield loop
-    loop.close()
+from app.database import init_db, close_db
 
 
 @pytest.fixture
 async def client():
     """Create async test client."""
+    await init_db()
     async with AsyncClient(
         transport=ASGITransport(app=app),
         base_url="http://test"
     ) as ac:
         yield ac
+    await close_db()
 
 
 class TestHealthEndpoints:

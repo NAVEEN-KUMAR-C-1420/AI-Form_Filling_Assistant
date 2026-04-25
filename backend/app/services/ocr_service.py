@@ -317,11 +317,41 @@ class OCRService:
         )
         
         # Calculate average confidence (excluding -1 values)
-        confidences = [int(c) for c in data['conf'] if int(c) > 0]
+        confidences = [float(c) for c in data['conf'] if float(c) > 0]
         avg_confidence = sum(confidences) / len(confidences) if confidences else 0
-        
-        # Get text
-        text = pytesseract.image_to_string(image, lang=lang)
+
+        # Reconstruct text from the OCR data instead of running a second
+        # Tesseract pass for plain text extraction.
+        text_lines = []
+        current_line_key = None
+        current_line_words = []
+
+        for word, page_num, block_num, par_num, line_num in zip(
+            data.get("text", []),
+            data.get("page_num", []),
+            data.get("block_num", []),
+            data.get("par_num", []),
+            data.get("line_num", []),
+        ):
+            clean_word = word.strip()
+            if not clean_word:
+                continue
+
+            line_key = (page_num, block_num, par_num, line_num)
+            if current_line_key is None:
+                current_line_key = line_key
+            elif line_key != current_line_key:
+                if current_line_words:
+                    text_lines.append(" ".join(current_line_words))
+                current_line_key = line_key
+                current_line_words = []
+
+            current_line_words.append(clean_word)
+
+        if current_line_words:
+            text_lines.append(" ".join(current_line_words))
+
+        text = "\n".join(text_lines)
         
         # Debug logging - log the extracted text
         logger.info(f"OCR extracted text (lang={lang}):\n{text}")
@@ -956,8 +986,6 @@ class OCRService:
         logger.info(f"PAN OCR fix: {value} -> {fixed}")
         
         return fixed
-        
-        return ''.join(result)
     
     def _clean_value(self, value: str, entity_type: EntityType) -> str:
         """Clean extracted value"""
@@ -1060,7 +1088,7 @@ class OCRService:
         """Generate warnings based on extraction results"""
         warnings = []
         
-        if confidence < 70:
+        if confidence < 0.70:
             warnings.append("Low overall OCR confidence. Please verify all extracted data.")
         
         low_confidence_entities = [

@@ -1,4 +1,12 @@
-version: '3.8'
+# SECURITY NOTE
+# All three secrets below must be set in backend/.env before docker-compose up.
+# The :? syntax makes Docker Compose fail fast with a clear error if any are
+# missing, instead of silently using weak default values.
+#
+# Generate strong values:
+#   DB_PASSWORD -> openssl rand -base64 32
+#   SECRET_KEY -> openssl rand -hex 32
+#   ENCRYPTION_KEY -> python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"
 
 services:
   # PostgreSQL Database
@@ -8,7 +16,8 @@ services:
     restart: unless-stopped
     environment:
       POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: ${DB_PASSWORD:-FormAssist2024!}
+      # No weak default - must be supplied via .env
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD must be set in backend/.env}
       POSTGRES_DB: form_assistant
     volumes:
       - postgres_data:/var/lib/postgresql/data
@@ -30,14 +39,19 @@ services:
     container_name: form_assistant_api
     restart: unless-stopped
     environment:
-      - DATABASE_URL=postgresql+asyncpg://postgres:${DB_PASSWORD:-FormAssist2024!}@db:5432/form_assistant
-      - SECRET_KEY=${SECRET_KEY:-ai-form-assistant-secret-key-change-in-prod}
-      - ENCRYPTION_KEY=${ENCRYPTION_KEY:-form-assistant-encrypt-key-32b!}
+      # No weak defaults on any secret variable
+      - DATABASE_URL=postgresql+asyncpg://postgres:${DB_PASSWORD:?DB_PASSWORD must be set}@db:5432/form_assistant
+      - SECRET_KEY=${SECRET_KEY:?SECRET_KEY must be set in backend/.env}
+      - ENCRYPTION_KEY=${ENCRYPTION_KEY:?ENCRYPTION_KEY must be set in backend/.env}
       - TESSERACT_CMD=/usr/bin/tesseract
       - ENVIRONMENT=development
       - DEBUG=true
+      - ENABLE_HTTPS_REDIRECT=false
       - HOST=0.0.0.0
       - PORT=8000
+      - AUTO_CREATE_TABLES=true
+      - ALLOWED_HOSTS=["localhost","127.0.0.1"]
+      - ALLOWED_ORIGINS=["http://localhost:3000","http://localhost:8000","http://127.0.0.1:8000","chrome-extension://*"]
     volumes:
       - upload_data:/app/temp_uploads
     ports:
